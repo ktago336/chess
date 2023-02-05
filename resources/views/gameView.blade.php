@@ -14,7 +14,7 @@
 <form method="POST" action="/move">
     @csrf
     <input type="text" name="move">Введите ход в полной форме<br>
-    <input type="submit" title="ПОХОДИТЬ">
+    <input type="submit" value="ПОХОДИТЬ" required>
 </form>
 <h3><a href="/">GIVE UP</a></h3>
 <br><br>

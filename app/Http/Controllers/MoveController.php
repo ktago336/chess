@@ -14,7 +14,7 @@ class MoveController extends Controller
         $move = $request->validate([
             'move' => ['required'],
         ]);
-
+        #redirect()->back()->withErrors(['error'=>'not your turn']);
         $gameID=explode("/",url()->previous())[4];
 
         $game=new Game();
@@ -55,10 +55,10 @@ class MoveController extends Controller
 
 
 
-        $desk=$game->move($desk, $request->input('move'),$state);
+        $game->move($desk, $request->input('move'),$state);
         if ($desk!=0) {
             DB::table('games')->where('id', '=', $gameID)
-                ->update(['desk' => json_encode($desk), 'turn_id' => $opponentID]);
+                ->update(['desk' => json_encode($desk), ]); //'turn_id' => $opponentID
         }
         //@todo WHO CHECKED->DB
         return redirect()->back();
