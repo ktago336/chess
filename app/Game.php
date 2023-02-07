@@ -10,7 +10,14 @@ class Game
 
     public function move(&$jDesk,string $move, $state){
         $move=trim($move);
+        $move=trim($move,'+');
         $move=strtolower($move);
+
+        if (!$this->validateMove($move)){
+            self::wrongMoveExit('move not valid');
+            return 0;
+        }
+        //@TODO добавь общую проверку хода
 
         //@TODO не забудь описать цвета фигур при превращении
 
@@ -25,11 +32,12 @@ class Game
         }
 
         elseif (strlen($move)==6){  //kill pa2xb3
-            if(!$this->checkPiece($jDesk,$move,$state)){
+            if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
                 self::wrongMoveExit();
                 return 0;
             }
-            $this->checkMove($jDesk, $move, $state);
+            $move=$this->convertKill($move);
+            $this->checkMove($jDesk,$move,$state);
         }
 
         elseif (strlen($move)==2){  //00
@@ -43,12 +51,40 @@ class Game
         elseif (strlen($move)==7){  //pawn promotion pa7a8=q
 
         }
+        elseif (strlen($move)==8){  // pa7xb8=q
+            if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
+                self::wrongMoveExit();
+                return 0;
+            }
+            $this->checkMove($jDesk,$move,$state);
+        }
 
         else return 0;
         // @TODO check pnd checkmate are state properties
 
         //@todo AFTER ALL, before returning json !!!!!check for checks
         return $jDesk;
+    }
+
+    private function checkKill($desk,$move,$state){
+        $x1=$this->aton($move[1]);
+        $y1=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+
+        if (empty($desk[$x2][$y2])){
+            self::wrongMoveExit('wrong kill move');
+            return false;
+        }
+        elseif ($desk[$x2][$y2][0]==$state['color']){
+            self::wrongMoveExit('wrong kill move');
+            return false;
+        }
+        else return true;
+    }
+
+    private function convertKill($move){
+        return str_replace('x','',$move);
     }
 
     private function checkPiece($jDesk, string $move, $state):bool{
@@ -77,7 +113,88 @@ class Game
 
     }
 
+    private function validateMove($move){
+        $pieces=array('p','r','n','b','q','k');
+        $letters=array('a','b','c','d','e','f','g','h');
 
+        $piece=$move[0];
+        $x=$this->aton($move[1]);
+        $y=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+        if ($piece=='p' && ($y2==1||$y2==8) && strlen($move)!=7 ){
+            self::wrongMoveExit();
+        }
+
+        if (strlen($move)==6&&$move[3]=='x'){  //kill pa2xb3
+            $move=str_replace('x','',$move);
+        }
+        if (strlen($move)==6&&$move[3]!='x'){  //kill pa2xb3
+            return 0;
+        }
+
+        if (strlen($move)==5){  //usual move pa2a3
+               if(!in_array($move[0],$pieces)){
+                   return 0;
+               }
+               elseif (!in_array($move[1],$letters)){
+                   return 0;
+               }
+               elseif (!in_array($move[3],$letters)){
+                   return 0;
+               }
+               elseif (intval($move[2])>8||intval($move[2])<1){
+                   return 0;
+               }
+               elseif (intval($move[4])>8||intval($move[4])<1){
+                   return 0;
+               }
+               else return 1;
+
+        }
+
+        elseif (strlen($move)==2){  //00
+            if ($move[0]!='0'||$move[1]!='0'){
+                return 0;
+            }
+            else return 1;
+
+        }
+
+        elseif (strlen($move)==3){  //000
+            if ($move[0]!='0'||$move[1]!='0'||$move[2]!='0'){
+                return 0;
+            }
+            else return 1;
+
+        }
+
+        elseif (strlen($move)==7){  //pawn promotion pa7a8=q
+            if(!in_array($move[0],$pieces)){
+                return 0;
+            }
+            elseif (!in_array($move[1],$letters)){
+                return 0;
+            }
+            elseif (!in_array($move[3],$letters)){
+                return 0;
+            }
+            elseif (intval($move[2])>8||intval($move[2])<1){
+                return 0;
+            }
+            elseif (intval($move[4])>8||intval($move[4])<1){
+                return 0;
+            }
+            elseif ($move[5]!='='){
+                return 0;
+            }
+            elseif (!in_array($move[6],$letters)){
+                return 0;
+            }
+            else return 1;
+        }
+        else return 0;
+    }
 
     private function aton($a): int
     {
@@ -100,11 +217,17 @@ class Game
         $y2=intval($move[4]);
 
         if ($piece=='p') {
-
             if (abs($x-$x2)==1) {
-                $this->pawnKill($desk, $move, $state);
-            } elseif (abs($x-$x2) == 0) {
-                $this->pawnMove($desk, $move, $state);
+                if ($x2!=8||$x2!=1)
+                    $this->pawnKill($desk, $move, $state);
+                if ($x2==8||$x2==1)
+                    $this->pawnPromotionKill($desk,$move,$state);
+            }
+            elseif (abs($x-$x2) == 0) {
+                if ($x2!=8||$x2!=1)
+                    $this->pawnMove($desk, $move, $state);
+                if ($x2==8||$x2==1)
+                    $this->pawnPromotion($desk,$move,$state);
             }
         }
         elseif ($piece=='r') {
@@ -148,7 +271,7 @@ class Game
         elseif ($state['color']=='b') {
             if ($y1-$y2==1 && $desk[$x2][$y2]=='') {
                 $desk[$x1][$y1] = '';
-                $desk[$x2][$y2] = 'wp';
+                $desk[$x2][$y2] = 'bp';
             }
             elseif ($y1-$y2==2 && $desk[$x2][$y2]=='' && $desk[$x2-1][$y2-1]=='' && $x1==7){
                 $desk[$x1][$y1] = '';
@@ -166,7 +289,6 @@ class Game
         $y2=intval($move[4]);
 
         if ($state['color']=='w') {
-            if ($desk[$x2][$y2]=='')self::wrongMoveExit();
             if (abs($y1-$y2) == 1 && $x2-$x1==1&&(!empty($desk[$x2][$y2])&&$desk[$x2][$y2][0]=='b')){
                 $desk[$x1][$y1]='';
                 $desk[$x2][$y2]='wp';
@@ -175,7 +297,6 @@ class Game
 
         }
         elseif ($state['color']=='b') {
-            if ($desk[$x2][$y2]=='')self::wrongMoveExit();
             if (abs($y1-$y2) == 1 && $x1-$x2==1&&($desk[$x2][$y2][0]=='w')){
                 $desk[$x1][$y1]='';
                 $desk[$x2][$y2]='bp';
@@ -282,4 +403,59 @@ class Game
         $desk[$x1][$y1]='';
         $desk[$x2][$y2]=$state['color'].'k';
     }
+
+    private function pawnPromotion(&$desk,$move,$state){
+        $x1=$this->aton($move[1]);
+        $y1=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+
+        if ($move[6]=='p'){
+            self::wrongMoveExit('pawn error');
+        }
+        if ($x1!=$x2) self::wrongMoveExit();
+
+        if ($state['color']=='w') {
+            if ($y2-$y1==1 && $desk[$x2][$y2]==''&& $y2==8) {
+                $desk[$x1][$y1] = '';
+                $desk[$x2][$y2] = 'w'.$move[6];
+            }
+            else self::wrongMoveExit();
+        }
+        elseif ($state['color']=='b') {
+            if ($y1-$y2==1 && $desk[$x2][$y2]=='' && $y2==1) {
+                $desk[$x1][$y1] = '';
+                $desk[$x2][$y2] = 'w'.$move[6];
+            }
+            else self::wrongMoveExit();
+        }
+    }
+
+    private function pawnPromotionKill(&$desk,$move,$state){
+        $x1=$this->aton($move[1]);
+        $y1=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+
+        if ($move[7]=='p'){
+            self::wrongMoveExit('pawn error');
+        }
+        if (abs($x1-$x2)!=1) self::wrongMoveExit();
+
+        if ($state['color']=='w') {
+            if ($y2-$y1==1 && $desk[$x2][$y2][0]=='b'&& $y2==8) {
+                $desk[$x1][$y1] = '';
+                $desk[$x2][$y2] = 'w'.$move[6];
+            }
+            else self::wrongMoveExit();
+        }
+        elseif ($state['color']=='b') {
+            if ($y1-$y2==1 && $desk[$x2][$y2][0]=='b' && $y2==1) {
+                $desk[$x1][$y1] = '';
+                $desk[$x2][$y2] = 'w'.$move[6];
+            }
+            else self::wrongMoveExit();
+        }
+    }
+
 }

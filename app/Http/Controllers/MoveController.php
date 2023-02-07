@@ -46,6 +46,9 @@ class MoveController extends Controller
         $state=array('color'=>$color,
             'id'=>$id,
             'pass'=>$passAbility,
+            'white_checked'=>$gameInfo->white_checked,
+            'black_checked'=>$gameInfo->black_checked,
+
         );
 
 
@@ -58,7 +61,7 @@ class MoveController extends Controller
         $game->move($desk, $request->input('move'),$state);
         if ($desk!=0) {
             DB::table('games')->where('id', '=', $gameID)
-                ->update(['desk' => json_encode($desk), ]); //'turn_id' => $opponentID
+                ->update(['desk' => json_encode($desk), ]); //'turn_id' => $opponentID, 'white_checked'=>$state['w']//@TODO
         }
         //@todo WHO CHECKED->DB
         return redirect()->back();
