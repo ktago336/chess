@@ -113,7 +113,9 @@ class Game
         elseif ($piece=='n'){
             $this->knightMove($desk,$move,$state);
         }
-        elseif ($piece=='b');
+        elseif ($piece=='b'){
+            $this->bishopMove($desk,$move,$state);
+        }
         elseif ($piece=='q');
         elseif ($piece=='k');
         else self::wrongMoveExit();
@@ -193,9 +195,18 @@ class Game
         $buf[$x1][$y1]='';
         $buf[$x2][$y2]='';
         if ($x1==$x2){
-            for ($i=min($y1,$y2);$i<=max($y1,$y2);$i++){
+            for ($i=min($y1,$y2)+1;$i<max($y1,$y2);$i++){
                 if ($desk[$x1][$i]!=''){
-                    self::wrongMoveExit();
+                    self::wrongMoveExit('rook error');
+                }
+            }
+            $desk[$x2][$y2]=$state['color'].'r';
+            $desk[$x1][$y1]='';
+        }
+        if ($y1==$y2){
+            for ($i=min($x1,$x2)+1;$i<max($x1,$x2);$i++){
+                if ($desk[$y1][$i]!=''){
+                    self::wrongMoveExit('rook error');
                 }
             }
             $desk[$x2][$y2]=$state['color'].'r';
@@ -217,6 +228,30 @@ class Game
     }
 
     private function bishopMove(&$desk,$move,$state){
-        //@TODO
+        $x1=$this->aton($move[1]);
+        $y1=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+        if (abs($x1-$x2)!=abs($y1-$y2)){
+            self::wrongMoveExit();
+        }
+        for ($i=min($x1,$x2)+1; $i<max($x1,$x2); $i++){
+            for ($j=min($y1,$y2)+1; $j<max($y1,$y2); $j++){
+                if($desk[$i][$j]!=''){
+                    self::wrongMoveExit('bishop error');
+                }
+            }
+        }
+        $desk[$x1][$y1]='';
+        $desk[$x2][$y2]=$state['color'].'b';
+    }
+
+    private function queenMove(&$desk,$move,$state){
+        $x1=$this->aton($move[1]);
+        $y1=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+
+        if (($x1!=$x2)&&($y1!=$y2))
     }
 }
