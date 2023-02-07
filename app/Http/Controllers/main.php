@@ -44,13 +44,25 @@ class main extends Controller
 
             echo '<br>';
         }
-
-
-
-
-
-
         return view('gameView',['desk'=>$jdesk]);
+    }
 
+    public function giveUp(){
+        $gameID=explode("/",url()->previous())[4];
+        $id=Auth::id();
+
+        $gameInfo=DB::table('games')
+            ->where('id','=',$gameID)
+            ->first();
+
+        if ($id==$gameInfo->white_id) {
+            DB::table('games')->where('id', '=', $gameID)
+                ->update(['white_won' => 1 ]);
+        }
+        elseif ($id==$gameInfo->black_id) {
+            DB::table('games')->where('id', '=', $gameID)
+                ->update(['black_won' => 1 ]);
+        }
+        return redirect('/');//@TODO redirect back + game archive results
     }
 }

@@ -49,7 +49,11 @@ class Game
         }
 
         elseif (strlen($move)==7){  //pawn promotion pa7a8=q
-
+            if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
+                self::wrongMoveExit();
+                return 0;
+            }
+            $move=$this->convertKill($move);
         }
         elseif (strlen($move)==8){  // pa7xb8=q
             if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
@@ -67,6 +71,7 @@ class Game
     }
 
     private function checkKill($desk,$move,$state){
+        $move=$this->convertKill($move);
         $x1=$this->aton($move[1]);
         $y1=intval($move[2]);
         $x2=$this->aton($move[3]);
@@ -90,7 +95,7 @@ class Game
     private function checkPiece($jDesk, string $move, $state):bool{
 
         $piece=$move[0];
-
+        $move=$this->convertKill($move);
         $x=$this->aton($move[1]);
         $y=intval($move[2]);
         $x2=$this->aton($move[3]);
@@ -118,9 +123,9 @@ class Game
         $letters=array('a','b','c','d','e','f','g','h');
 
         $piece=$move[0];
-        $x=$this->aton($move[1]);
-        $y=intval($move[2]);
-        $x2=$this->aton($move[3]);
+        //$x=$this->aton($move[1]);
+        //$y=intval($move[2]);
+        //$x2=$this->aton($move[3]);
         $y2=intval($move[4]);
         if ($piece=='p' && ($y2==1||$y2==8) && strlen($move)!=7 ){
             self::wrongMoveExit();
@@ -218,15 +223,15 @@ class Game
 
         if ($piece=='p') {
             if (abs($x-$x2)==1) {
-                if ($x2!=8||$x2!=1)
+                if ($y2!=8||$y2!=1)
                     $this->pawnKill($desk, $move, $state);
-                if ($x2==8||$x2==1)
+                if ($y2==8||$y2==1)
                     $this->pawnPromotionKill($desk,$move,$state);
             }
             elseif (abs($x-$x2) == 0) {
-                if ($x2!=8||$x2!=1)
+                if ($y2!=8||$y2!=1)
                     $this->pawnMove($desk, $move, $state);
-                if ($x2==8||$x2==1)
+                if ($y2==8||$y2==1)
                     $this->pawnPromotion($desk,$move,$state);
             }
         }
@@ -262,7 +267,7 @@ class Game
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'wp';
             }
-            elseif ($y2-$y1==2 && $desk[$x2][$y2]=='' && $desk[$x1+1][$y1+1]=='' && $x1==2){
+            elseif ($y2-$y1==2 && $desk[$x2][$y2]=='' && $desk[$x1][$y1+1]=='' && $y1==2){
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'wp';
             }
@@ -273,7 +278,7 @@ class Game
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'bp';
             }
-            elseif ($y1-$y2==2 && $desk[$x2][$y2]=='' && $desk[$x2-1][$y2-1]=='' && $x1==7){
+            elseif ($y1-$y2==2 && $desk[$x2][$y2]=='' && $desk[$x2][$y2-1]=='' && $y1==7){
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'bp';
             }

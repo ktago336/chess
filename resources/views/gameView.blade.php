@@ -16,7 +16,7 @@
     <input type="text" name="move">Введите ход в полной форме<br>
     <input type="submit" value="ПОХОДИТЬ" required>
 </form>
-<h3><a href="/">GIVE UP</a></h3>
+<h3><a href="/giveup">GIVE UP</a></h3>
 <br><br>
 <h2><a href="/">HOME</a></h2>
 </body>

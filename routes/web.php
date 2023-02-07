@@ -28,6 +28,8 @@ Route::get('/login', function (){
 });
 Route::get('/logout', [\App\Http\Controllers\LoginController::class, 'logout']);
 
+Route::get('/giveup', [\App\Http\Controllers\main::class, 'giveUp']);
+
 
 Route::get('/register', function (){
     return view('register');
