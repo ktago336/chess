@@ -33,7 +33,7 @@ class Game
         }
 
         elseif (strlen($move)==2){  //00
-            $this->pawnKill($jDesk,$move,$state);
+            //$this->pawnKill($jDesk,$move,$state);
         }
 
         elseif (strlen($move)==3){  //000
@@ -51,7 +51,7 @@ class Game
         return $jDesk;
     }
 
-    private function checkPiece($jDesk, string $move, $state){
+    private function checkPiece($jDesk, string $move, $state):bool{
 
         $piece=$move[0];
 
@@ -116,8 +116,12 @@ class Game
         elseif ($piece=='b'){
             $this->bishopMove($desk,$move,$state);
         }
-        elseif ($piece=='q');
-        elseif ($piece=='k');
+        elseif ($piece=='q'){
+            $this->queenMove($desk,$move,$state);
+        }
+        elseif ($piece=='k'){
+            $this->kingMove($desk,$move,$state);
+        }
         else self::wrongMoveExit();
     }
 
@@ -263,5 +267,19 @@ class Game
             $this->bishopMove($desk,$move,$state,'q');
         }
         else self::wrongMoveExit();
+    }
+
+    private function kingMove(&$desk,$move,$state){
+        $x1=$this->aton($move[1]);
+        $y1=intval($move[2]);
+        $x2=$this->aton($move[3]);
+        $y2=intval($move[4]);
+
+        if (abs($x1-$x2)>1||abs($y1-$y2)>1){
+            self::wrongMoveExit('wrong king move');
+        }
+
+        $desk[$x1][$y1]='';
+        $desk[$x2][$y2]=$state['color'].'k';
     }
 }
