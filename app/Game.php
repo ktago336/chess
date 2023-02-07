@@ -181,7 +181,7 @@ class Game
         else self::wrongMoveExit();
     }
 
-    private function rookMove(&$desk,$move,$state){
+    private function rookMove(&$desk,$move,$state,$piece='r'){
         $x1=$this->aton($move[1]);
         $y1=intval($move[2]);
         $x2=$this->aton($move[3]);
@@ -209,7 +209,7 @@ class Game
                     self::wrongMoveExit('rook error');
                 }
             }
-            $desk[$x2][$y2]=$state['color'].'r';
+            $desk[$x2][$y2]=$state['color'].$piece;
             $desk[$x1][$y1]='';
         }
     }
@@ -227,7 +227,7 @@ class Game
         else self::wrongMoveExit();
     }
 
-    private function bishopMove(&$desk,$move,$state){
+    private function bishopMove(&$desk,$move,$state, $piece='b'){
         $x1=$this->aton($move[1]);
         $y1=intval($move[2]);
         $x2=$this->aton($move[3]);
@@ -243,7 +243,7 @@ class Game
             }
         }
         $desk[$x1][$y1]='';
-        $desk[$x2][$y2]=$state['color'].'b';
+        $desk[$x2][$y2]=$state['color'].$piece;
     }
 
     private function queenMove(&$desk,$move,$state){
@@ -252,6 +252,16 @@ class Game
         $x2=$this->aton($move[3]);
         $y2=intval($move[4]);
 
-        if (($x1!=$x2)&&($y1!=$y2))
+        if (($x1!=$x2)&&($y1!=$y2)&&(abs($x1-$x2)!=abs($y1-$y2))){
+            self::wrongMoveExit('queen move error');
+        }
+
+        if ($x1==$x2||$y1==$y2){
+            $this->rookMove($desk,$move,$state,'q');
+        }
+        elseif (abs($x1-$x2)==abs($y1-$y2)){
+            $this->bishopMove($desk,$move,$state,'q');
+        }
+        else self::wrongMoveExit();
     }
 }
