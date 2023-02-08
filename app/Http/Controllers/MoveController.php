@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 
+use http\Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -48,6 +49,11 @@ class MoveController extends Controller
             'pass'=>$passAbility,
             'white_checked'=>$gameInfo->white_checked,
             'black_checked'=>$gameInfo->black_checked,
+            'black_can_000'=>$gameInfo->black_can_000,
+            'black_can_00'=>$gameInfo->black_can_00,
+            'white_can_000'=>$gameInfo->white_can_000,
+            'white_can_00'=>$gameInfo->white_can_00,
+            'game_id'=>$gameID,
 
         );
 
@@ -56,12 +62,16 @@ class MoveController extends Controller
             return redirect()->back()->withErrors(['error'=>'not your turn']);
         }
 
-
-
         $game->move($desk, $request->input('move'),$state);
+
         if ($desk!=0) {
             DB::table('games')->where('id', '=', $gameID)
-                ->update(['desk' => json_encode($desk), ]); //'turn_id' => $opponentID, 'white_checked'=>$state['w']//@TODO
+                ->update(['desk' => json_encode($desk),
+                    'black_can_000'=>$state['black_can_000'],
+                    'black_can_00'=>$state['black_can_00'],
+                    'white_can_000'=>$state['white_can_000'],
+                    'white_can_00'=>$state['white_can_00'],
+                    ]); //'turn_id' => $opponentID, 'white_checked'=>$state['w'] , 'white_can_000'=>$state//@TODO
         }
         //@todo WHO CHECKED->DB
         return redirect()->back();
