@@ -9,6 +9,8 @@ class Game
     }
 
     public function move(&$jDesk,string $move, &$state){
+        $originalDesk=$jDesk;
+
         $move=trim($move);
         $move=trim($move,'+');
         $move=strtolower($move);
@@ -21,9 +23,7 @@ class Game
             self::wrongMoveExit('move not valid');
             return 0;
         }
-        //@TODO добавь общую проверку хода
         //@TODO добавь в validateMove проверку рокировок
-        //@TODO не забудь описать цвета фигур при превращении
 
         if (strlen($move)==5){  //usual move pa2a3
             if(!$this->checkPiece($jDesk,$move,$state)){
@@ -71,11 +71,22 @@ class Game
             $this->checkMove($jDesk,$move,$state);
         }
 
-        else return 0;
-        // @TODO check pnd checkmate are state properties
+        else return redirect()->back()->withErrors("error",'error');
 
-        //@todo AFTER ALL, before returning  (make buf in the beginning of move()) !!!!!check for checks
-        return $jDesk;
+        if ($this->checked($jDesk)==$state['color']){
+            $jDesk=$originalDesk;
+            return redirect()->back()->withErrors("error",'checked');
+        }
+        if ($this->checked($jDesk)!=0&&$this->checked($jDesk)!=$state['color']){
+            if ($state['color']=='w') $state['black_checked']=1;
+            if ($state['color']=='b') $state['white_checked']=1;
+        }
+        if ($this->checked($jDesk)==0){
+            $state['black_checked']=0;
+            $state['white_checked']=0;
+        }
+
+        else return $jDesk;
     }
 
     private function checkKill($desk,$move,$state){
@@ -567,6 +578,218 @@ class Game
                 else redirect()->back()->withErrors('error');
         }
         else return redirect()->back()->withErrors('error');
+    }
+
+    public function checked($desk){
+        for ($i=1;$i<=8;$i++){
+            for ($j=1;$j<=8;$j++){
+                if (!empty($desk[$i][$j]&&$desk[$i][$j]=='wk')){
+                    //
+                    //white king found
+                    //
+
+                    if ((isset($desk[$i+1][$j+1])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i][$j+1])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i-1][$j+1])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i+1][$j])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i-1][$j])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i+1][$j-1])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i][$j-1])&&$desk[$i+1][$j+1]=='bk')||
+                        (isset($desk[$i-1][$j-1])&&$desk[$i+1][$j+1]=='bk')
+                    ){
+                        return 'w';
+                    }
+
+                    if((isset($desk[$i+1][$j+1])&&$desk[$i+1][$j+1]=='bp')||
+                        (isset($desk[$i-1][$j+1])&&$desk[$i-1][$j+1]=='bp')){
+                        return 'w';
+                    }
+                    if (isset($desk[$i+1][$j+2]) && !empty($desk[$i+1][$j+2]) &&  $desk[$i+1][$j+2]=='bn'||
+                        isset($desk[$i+2][$j+1]) && !empty($desk[$i+2][$j+1]) &&  $desk[$i+2][$j+1]=='bn'||
+                        isset($desk[$i+1][$j-2]) && !empty($desk[$i+1][$j-2]) &&  $desk[$i+1][$j-2]=='bn'||
+                        isset($desk[$i+2][$j-1]) && !empty($desk[$i+2][$j-1]) &&  $desk[$i+2][$j-1]=='bn'||
+                        isset($desk[$i-1][$j+2]) && !empty($desk[$i-1][$j+2]) &&  $desk[$i-1][$j+2]=='bn'||
+                        isset($desk[$i-2][$j+1]) && !empty($desk[$i-2][$j+1]) &&  $desk[$i-2][$j+1]=='bn'||
+                        isset($desk[$i-1][$j-2]) && !empty($desk[$i-1][$j-2]) &&  $desk[$i-1][$j-2]=='bn'||
+                        isset($desk[$i-2][$j-1]) && !empty($desk[$i-2][$j-1]) &&  $desk[$i-2][$j-1]=='bn'
+                    ){
+                        return 'w';
+                    }
+
+                    $xUpClear=false;
+                    $xDownClear=false;
+                    $yUpClear=false;
+                    $yDownClear=false;
+
+                    $xUp_yUpClear=false;
+                    $xDown_yUpClear=false;
+                    $xUp_yDownClear=false;
+                    $xDown_yDownClear=false;
+
+
+                    for ($col=1; $col<=8;$col++){
+                        //
+                        //rook + queen check
+                        //
+                        if($desk[$i+$col][$j]!=''&&!$xUpClear) {
+                            if ($desk[$i + $col][$j] == 'br' || $desk[$i + $col][$j] == 'bq') {
+                                return 'w';
+                            } else $xUpClear = true;
+                        }
+                        if($desk[$i-$col][$j]!=''&&!$xDownClear){
+                            if($desk[$i-$col][$j]=='br'||$desk[$i-$col][$j]=='bq'){
+                                return 'w';
+                            }
+                            else $xDownClear=true;
+                        }
+                        if($desk[$i][$j+$col]!=''&&!$yUpClear){
+                            if($desk[$i][$j+$col]=='br'||$desk[$i][$j+$col]=='bq'){
+                                return 'w';
+                            }
+                            else $yUpClear=true;
+                        }
+                        if($desk[$i][$j-$col]!=''&&!$yDownClear){
+                            if($desk[$i][$j-$col]=='br'||$desk[$i][$j-$col]=='bq'){
+                                return 'w';
+                            }
+                            else $yDownClear=true;
+                        }
+                        //
+                        //bishop and queen check
+                        //
+                        if($desk[$i+$col][$j+$col]!=''&&!$xUp_yUpClear){
+                            if($desk[$i+$col][$j+$col]=='bb'||$desk[$i+$col][$j+$col]=='bq'){
+                                return 'w';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                        if($desk[$i+$col][$j-$col]!=''&&!$xUp_yDownClear){
+                            if($desk[$i+$col][$j-$col]=='bb'||$desk[$i+$col][$j-$col]=='bq'){
+                                return 'w';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                        if($desk[$i-$col][$j+$col]!=''&&!$xDown_yUpClear){
+                            if($desk[$i-$col][$j+$col]=='bb'||$desk[$i-$col][$j+$col]=='bq'){
+                                return 'w';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                        if($desk[$i-$col][$j-$col]!=''&&!$xDown_yDownClear){
+                            if($desk[$i-$col][$j-$col]=='bb'||$desk[$i-$col][$j-$col]=='bq'){
+                                return 'w';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                    }
+                    return 0;
+                }
+
+
+                elseif (!empty($desk[$i][$j]&&$desk[$i][$j]=='bk')){
+                    //
+                    //black king found
+                    //
+
+                    if ((isset($desk[$i+1][$j+1])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i][$j+1])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i-1][$j+1])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i+1][$j])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i-1][$j])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i+1][$j-1])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i][$j-1])&&$desk[$i+1][$j+1]=='wk')||
+                        (isset($desk[$i-1][$j-1])&&$desk[$i+1][$j+1]=='wk')
+                    ){
+                        return 'b';
+                    }
+
+                    if((isset($desk[$i+1][$j-1])&&$desk[$i+1][$j-1]=='wp')||
+                        (isset($desk[$i-1][$j-1])&&$desk[$i-1][$j-1]=='wp')){
+                        return 'b';
+                    }
+                    if (isset($desk[$i+1][$j+2]) && !empty($desk[$i+1][$j+2]) &&  $desk[$i+1][$j+2]=='wn'||
+                        isset($desk[$i+2][$j+1]) && !empty($desk[$i+2][$j+1]) &&  $desk[$i+2][$j+1]=='wn'||
+                        isset($desk[$i+1][$j-2]) && !empty($desk[$i+1][$j-2]) &&  $desk[$i+1][$j-2]=='wn'||
+                        isset($desk[$i+2][$j-1]) && !empty($desk[$i+2][$j-1]) &&  $desk[$i+2][$j-1]=='wn'||
+                        isset($desk[$i-1][$j+2]) && !empty($desk[$i-1][$j+2]) &&  $desk[$i-1][$j+2]=='wn'||
+                        isset($desk[$i-2][$j+1]) && !empty($desk[$i-2][$j+1]) &&  $desk[$i-2][$j+1]=='wn'||
+                        isset($desk[$i-1][$j-2]) && !empty($desk[$i-1][$j-2]) &&  $desk[$i-1][$j-2]=='wn'||
+                        isset($desk[$i-2][$j-1]) && !empty($desk[$i-2][$j-1]) &&  $desk[$i-2][$j-1]=='wn'
+                    ){
+                        return 'b';
+                    }
+
+                    $xUpClear=false;
+                    $xDownClear=false;
+                    $yUpClear=false;
+                    $yDownClear=false;
+
+                    $xUp_yUpClear=false;
+                    $xDown_yUpClear=false;
+                    $xUp_yDownClear=false;
+                    $xDown_yDownClear=false;
+
+                    for ($col=1; $col<=8;$col++){
+                        //
+                        //rook + queen check
+                        //
+                        if($desk[$i+$col][$j]!=''&&!$xUpClear){
+                            if($desk[$i+$col][$j]=='wr'||$desk[$i+$col][$j]=='wq'){
+                                return 'b';
+                            }
+                            else $xUpClear=true;
+                        }
+                        if($desk[$i-$col][$j]!=''&&!$xDownClear){
+                            if($desk[$i-$col][$j]=='wr'||$desk[$i-$col][$j]=='wq'){
+                                return 'b';
+                            }
+                            else $xDownClear=true;
+                        }
+                        if($desk[$i][$j+$col]!=''&&!$yUpClear){
+                            if($desk[$i][$j+$col]=='wr'||$desk[$i][$j+$col]=='wq'){
+                                return 'b';
+                            }
+                            else $yUpClear=true;
+                        }
+                        if($desk[$i][$j-$col]!=''&&!$yDownClear){
+                            if($desk[$i][$j-$col]=='wr'||$desk[$i][$j-$col]=='wq'){
+                                return 'b';
+                            }
+                            else $yDownClear=true;
+                        }
+                        //
+                        //bishop and queen check
+                        //
+                        if($desk[$i+$col][$j+$col]!=''&&!$xUp_yUpClear){
+                            if($desk[$i+$col][$j+$col]=='wb'||$desk[$i+$col][$j+$col]=='wq'){
+                                return 'b';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                        if($desk[$i+$col][$j-$col]!=''&&!$xUp_yDownClear){
+                            if($desk[$i+$col][$j-$col]=='wb'||$desk[$i+$col][$j-$col]=='wq'){
+                                return 'b';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                        if($desk[$i-$col][$j+$col]!=''&&!$xDown_yUpClear){
+                            if($desk[$i-$col][$j+$col]=='wb'||$desk[$i-$col][$j+$col]=='wq'){
+                                return 'b';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                        if($desk[$i-$col][$j-$col]!=''&&!$xDown_yDownClear){
+                            if($desk[$i-$col][$j-$col]=='wb'||$desk[$i-$col][$j-$col]=='wq'){
+                                return 'b';
+                            }
+                            else $xUp_yUpClear=true;
+                        }
+                    }
+                    return 0;
+
+                }
+            }
+        }
     }
 
 }
