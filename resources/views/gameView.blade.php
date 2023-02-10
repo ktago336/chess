@@ -18,7 +18,7 @@
     body,
     .section-images {
         height: 90%;
-        margin: 0;
+        margin: 0 auto;
     }
     .section-images {
         margin: auto 2em;
@@ -33,6 +33,27 @@
         margin: 20px auto;
         border: 5px solid #000000;
     }
+    input{
+        width: 50%;
+        display: grid;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    .inpCls{
+        text-align: center;
+    }
+    .form{
+        height: 50px;
+        text-align: center;
+    }
+    .btn{
+        width: 20%;
+        height: 40px;
+    }
+    .home{
+        position: absolute;
+        right: 0px;
+    }
 </style>
 
 
@@ -43,16 +64,17 @@
 @enderror
 
 @if (\Illuminate\Support\Facades\Auth::check())
-
+<div class="inpCls">
 <form method="POST" action="/move">
     @csrf
 
-    <input type="text" name="move">Введите ход в полной форме<br>
-    <input type="submit" value="ПОХОДИТЬ" required>
+    <input class= 'form' type="text" name="move" placeholder="pd2d4"><h3>Введите ход в полной форме</h3>
+    <input class= 'btn' type="submit" value="ПОХОДИТЬ" required>
 </form>
-<h3><a href="/giveup">GIVE UP</a></h3>
-<br><br>
+</div>
+<h3><a href="/giveup">GIVE UP</a>
+
 @endif
-<h2><a href="/">HOME</a></h2>
+<a class="home" href="/">HOME</a></h3>
 </body>
 </html>

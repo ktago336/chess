@@ -277,7 +277,7 @@ class Game
         return $table[$a];
     }
 
-    private function checkMove(&$desk, $move, $state){
+    private function checkMove(&$desk, $move, $state){//@TODO pieceMoves() return true or false but state turn still changes, handle $this->error
         $piece=$move[0];
         $x=$this->aton($move[1]);
         $y=intval($move[2]);
