@@ -12,6 +12,7 @@ use \App\Game;
 class MoveController extends Controller
 {
     public function move(Request $request){
+        echo "<script>console.log('aaaaaaa' );</script>";
         $move = $request->validate([
             'move' => ['required'],
         ]);
@@ -71,9 +72,12 @@ class MoveController extends Controller
                     'black_can_00'=>$state['black_can_00'],
                     'white_can_000'=>$state['white_can_000'],
                     'white_can_00'=>$state['white_can_00'],
-                    ]); //'turn_id' => $opponentID, 'white_checked'=>$state['w'] , 'white_can_000'=>$state//@TODO
+                    'white_checked'=>$state['white_checked'],
+                    'black_checked'=>$state['black_checked']
+                    ]); //'turn_id' => $opponentID,  //@TODO
         }
         //@todo WHO CHECKED->DB
+
         return redirect()->back();
     }
 }

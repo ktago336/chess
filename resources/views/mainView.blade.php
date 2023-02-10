@@ -10,6 +10,5 @@
 <body>
 <h1><a href="/login">LOGIN</a> OR <a href="/register">REGISTER</a></h1>
 
-
 </body>
 </html>

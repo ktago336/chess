@@ -4,40 +4,52 @@ namespace App;
 
 class Game
 {
-    private static function wrongMoveExit(string $msg='error'){
-        return redirect()->back()->withErrors(['error' => $msg]);
+    public $error=null;
+
+    function debug($data) {
+        $output = $data;
+        if (is_array($output))
+            $output = implode(',', $output);
+
+        echo "<script>console.log('Debug Objects: " . $output . "' );</script>";
+    }
+    //@TODO refactor code to every func terurn error msg if needed and handle it
+    private function wrongMoveExit(string $msg='error'){
+        $this->error=$msg;
     }
 
     public function move(&$jDesk,string $move, &$state){
         $originalDesk=$jDesk;
+        $originalState=$state;
+        $this->debug('move started');
 
         $move=trim($move);
         $move=trim($move,'+');
         $move=strtolower($move);
         $buf=$this->convertKill($move);
-        if ($move[0]=='p'&& (intval($buf[2])==8||intval($buf[2])==1)){
-            return redirect()->back()->withErrors("error","ERROR promotion");
-        }
+//        if ($move[0]=='p'&&isset($buf[4])&& (intval($buf[4])==8||intval($buf[4])==1))){
+//            $this->wrongMoveExit('');
+//        }@TODO
 
         if (!$this->validateMove($move)){
-            self::wrongMoveExit('move not valid');
+            $this->wrongMoveExit('move not valid');
             return 0;
         }
         //@TODO добавь в validateMove проверку рокировок
 
         if (strlen($move)==5){  //usual move pa2a3
+
             if(!$this->checkPiece($jDesk,$move,$state)){
-                self::wrongMoveExit();
+                $this->wrongMoveExit();
                 return 0;
             }
-
             $this->checkMove($jDesk, $move, $state);
 
         }
 
         elseif (strlen($move)==6){  //kill pa2xb3
             if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
-                self::wrongMoveExit();
+                $this->wrongMoveExit();
                 return 0;
             }
             $move=$this->convertKill($move);
@@ -56,7 +68,7 @@ class Game
 
         elseif (strlen($move)==7){  //pawn promotion pa7a8=q
             if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
-                self::wrongMoveExit();
+                $this->wrongMoveExit();
                 return 0;
             }
             $move=$this->convertKill($move);
@@ -64,29 +76,37 @@ class Game
         }
         elseif (strlen($move)==8){  // pa7xb8=q
             if(!$this->checkPiece($jDesk,$move,$state)||!$this->checkKill($jDesk,$move,$state)){
-                self::wrongMoveExit();
+                $this->wrongMoveExit();
                 return 0;
             }
             $move=$this->convertKill($move);
             $this->checkMove($jDesk,$move,$state);
         }
 
-        else return redirect()->back()->withErrors("error",'error');
+        else $this->wrongMoveExit('errorrr1');
 
-        if ($this->checked($jDesk)==$state['color']){
+
+
+        if ($this->checked($jDesk,$state['color'])){
             $jDesk=$originalDesk;
-            return redirect()->back()->withErrors("error",'checked');
+            $state=$originalState;
+            $this->wrongMoveExit('errorrr1');
+            return null;
         }
-        if ($this->checked($jDesk)!=0&&$this->checked($jDesk)!=$state['color']){
-            if ($state['color']=='w') $state['black_checked']=1;
-            if ($state['color']=='b') $state['white_checked']=1;
+        if ($this->checked($jDesk,'w')){
+            $state['white_checked']=1;
         }
-        if ($this->checked($jDesk)==0){
-            $state['black_checked']=0;
+        if ($this->checked($jDesk,'b')){
+            $state['black_checked']=1;
+        }
+        if (!$this->checked($jDesk,'w')){
             $state['white_checked']=0;
         }
+        if (!$this->checked($jDesk,'b')){
+            $state['black_checked']=0;
+        }
 
-        else return $jDesk;
+        return $jDesk;
     }
 
     private function checkKill($desk,$move,$state){
@@ -97,11 +117,11 @@ class Game
         $y2=intval($move[4]);
 
         if (empty($desk[$x2][$y2])){
-            self::wrongMoveExit('wrong kill move');
+            $this->wrongMoveExit('wrong kill move');
             return false;
         }
         elseif ($desk[$x2][$y2][0]==$state['color']){
-            self::wrongMoveExit('wrong kill move');
+            $this->wrongMoveExit('wrong kill move');
             return false;
         }
         else return true;
@@ -121,13 +141,13 @@ class Game
         $y2=intval($move[4]);
 
         if ($jDesk[$x2][$y2]!='' && $jDesk[$x2][$y2][0]==$state['color'])
-            self::wrongMoveExit();
+            $this->wrongMoveExit();
 
         if ($x==$x2&&$y==$y2)
-            self::wrongMoveExit();
+            $this->wrongMoveExit();
 
         if ($x2<1||$x2>8||$y2<1||$y2>8){
-            self::wrongMoveExit();
+            $this->wrongMoveExit();
         }
 
         if (isset($jDesk[$x][$y][0]) && $jDesk[$x][$y][0]==$state['color'] && $jDesk[$x][$y][1]==$piece) return true;
@@ -145,9 +165,9 @@ class Game
         //$x=$this->aton($move[1]);
         //$y=intval($move[2]);
         //$x2=$this->aton($move[3]);
-        $y2=intval($move[4]);
+        if (isset($move[4]))$y2=intval($move[4]);
         if ($piece=='p' && ($y2==1||$y2==8) && strlen($move)!=7 ){
-            self::wrongMoveExit();
+            $this->wrongMoveExit();
         }
 
         if (strlen($move)==6&&$move[3]=='x'){  //kill pa2xb3
@@ -267,14 +287,16 @@ class Game
 
         if ($piece=='p') {
             if (abs($x-$x2)==1) {
-                if ($y2!=8||$y2!=1)
+                if ($y2!=8&&$y2!=1)
                     $this->pawnKill($desk, $move, $state);
                 if ($y2==8||$y2==1)
                     $this->pawnPromotionKill($desk,$move,$state);
             }
             elseif (abs($x-$x2) == 0) {
-                if ($y2!=8||$y2!=1)
+                if ($y2!=8&&$y2!=1){
                     $this->pawnMove($desk, $move, $state);
+
+                }
                 if ($y2==8||$y2==1)
                     $this->pawnPromotion($desk,$move,$state);
             }
@@ -294,7 +316,7 @@ class Game
         elseif ($piece=='k'){
             $this->kingMove($desk,$move,$state);
         }
-        else self::wrongMoveExit();
+        else $this->wrongMoveExit();
     }
 
     private function pawnMove(&$desk,$move,$state){
@@ -304,7 +326,9 @@ class Game
         $x2=$this->aton($move[3]);
         $y2=intval($move[4]);
 
-        if ($x1!=$x2) self::wrongMoveExit();
+        if ($x1!=$x2) $this->wrongMoveExit();
+
+
 
         if ($state['color']=='w') {
             if ($y2-$y1==1 && $desk[$x2][$y2]=='') {
@@ -312,10 +336,11 @@ class Game
                 $desk[$x2][$y2] = 'wp';
             }
             elseif ($y2-$y1==2 && $desk[$x2][$y2]=='' && $desk[$x1][$y1+1]=='' && $y1==2){
+
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'wp';
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
         }
         elseif ($state['color']=='b') {
             if ($y1-$y2==1 && $desk[$x2][$y2]=='') {
@@ -326,7 +351,7 @@ class Game
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'bp';
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
         }
     }
 
@@ -342,7 +367,7 @@ class Game
                 $desk[$x1][$y1]='';
                 $desk[$x2][$y2]='wp';
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
 
         }
         elseif ($state['color']=='b') {
@@ -350,9 +375,9 @@ class Game
                 $desk[$x1][$y1]='';
                 $desk[$x2][$y2]='bp';
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
         }
-        else self::wrongMoveExit();
+        else $this->wrongMoveExit();
     }
 
     private function rookMove(&$desk,$move,$state,$piece='r'){
@@ -361,7 +386,7 @@ class Game
         $x2=$this->aton($move[3]);
         $y2=intval($move[4]);
 
-        if (($x1!=$x2)&&($y1!=$y2)) self::wrongMoveExit();
+        if (($x1!=$x2)&&($y1!=$y2)) $this->wrongMoveExit();
 
 
         $buf=array();
@@ -371,16 +396,16 @@ class Game
         if ($x1==$x2){
             for ($i=min($y1,$y2)+1;$i<max($y1,$y2);$i++){
                 if ($desk[$x1][$i]!=''){
-                    self::wrongMoveExit('rook error');
+                    $this->wrongMoveExit('rook error');
                 }
             }
-            $desk[$x2][$y2]=$state['color'].'r';
+            $desk[$x2][$y2]=$state['color'].$piece;
             $desk[$x1][$y1]='';
         }
         if ($y1==$y2){
             for ($i=min($x1,$x2)+1;$i<max($x1,$x2);$i++){
                 if ($desk[$y1][$i]!=''){
-                    self::wrongMoveExit('rook error');
+                    $this->wrongMoveExit('rook error');
                 }
             }
             $desk[$x2][$y2]=$state['color'].$piece;
@@ -398,7 +423,10 @@ class Game
             $desk[$x2][$y2]=$state['color'].'n';
             $desk[$x1][$y1]='';
         }
-        else self::wrongMoveExit();
+        else {
+            $this->wrongMoveExit();
+            return null;
+        }
     }
 
     private function bishopMove(&$desk,$move,$state, $piece='b'){
@@ -407,12 +435,14 @@ class Game
         $x2=$this->aton($move[3]);
         $y2=intval($move[4]);
         if (abs($x1-$x2)!=abs($y1-$y2)){
-            self::wrongMoveExit();
+            $this->wrongMoveExit();
+            return null;
         }
         for ($i=min($x1,$x2)+1; $i<max($x1,$x2); $i++){
             for ($j=min($y1,$y2)+1; $j<max($y1,$y2); $j++){
                 if($desk[$i][$j]!=''){
-                    self::wrongMoveExit('bishop error');
+                    $this->wrongMoveExit('bishop error');
+                    return null;
                 }
             }
         }
@@ -427,7 +457,7 @@ class Game
         $y2=intval($move[4]);
 
         if (($x1!=$x2)&&($y1!=$y2)&&(abs($x1-$x2)!=abs($y1-$y2))){
-            self::wrongMoveExit('queen move error');
+            $this->wrongMoveExit('queen move error');
         }
 
         if ($x1==$x2||$y1==$y2){
@@ -436,7 +466,7 @@ class Game
         elseif (abs($x1-$x2)==abs($y1-$y2)){
             $this->bishopMove($desk,$move,$state,'q');
         }
-        else self::wrongMoveExit();
+        else $this->wrongMoveExit();
     }
 
     private function kingMove(&$desk,$move,$state){
@@ -446,7 +476,7 @@ class Game
         $y2=intval($move[4]);
 
         if (abs($x1-$x2)>1||abs($y1-$y2)>1){
-            self::wrongMoveExit('wrong king move');
+            $this->wrongMoveExit('wrong king move');
         }
 
         $desk[$x1][$y1]='';
@@ -454,7 +484,7 @@ class Game
     }
 
     private function pawnPromotion(&$desk,$move,$state){
-        //self::wrongMoveExit('pawn promotion started');
+        //$this->wrongMoveExit('pawn promotion started');
        // return redirect()->back()->withErrors('error','ERRROR');
        // echo "<script>console.log('pawnProm started' );</script>";
         $x1=$this->aton($move[1]);
@@ -462,21 +492,21 @@ class Game
         $x2=$this->aton($move[3]);
         $y2=intval($move[4]);
         if(strlen($move)!=7){   //pa7a8=q
-            self::wrongMoveExit('wrong move');
+            $this->wrongMoveExit('wrong move');
             //return 0;
         }
 
         if ($move[6]=='p'){
-            self::wrongMoveExit('pawn error');
+            $this->wrongMoveExit('pawn error');
         }
-        if ($x1!=$x2) self::wrongMoveExit();
+        if ($x1!=$x2) $this->wrongMoveExit();
 
         if ($state['color']=='w') {
             if ($y2-$y1==1 && $desk[$x2][$y2]==''&& $y2==8) {
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'w'.$move[6];
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
 
         }
         elseif ($state['color']=='b') {
@@ -484,12 +514,12 @@ class Game
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'w'.$move[6];
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
         }
     }
 
     private function pawnPromotionKill(&$desk,$move,$state){
-        //self::wrongMoveExit('pawn promotion kill started');
+        //$this->wrongMoveExit('pawn promotion kill started');
         //return redirect()->back()->withErrors('error','ERRROR');
 
         //echo "<script>console.log('pawnPromKill started' );</script>";
@@ -500,28 +530,28 @@ class Game
         $y2=intval($move[4]);
 
         if(strlen($move)!=7){   //pa7xa8=q
-            self::wrongMoveExit('wrong move');
+            $this->wrongMoveExit('wrong move');
             //return 0;
         }
 
         if ($move[6]=='p'){
-            self::wrongMoveExit('pawn error');
+            $this->wrongMoveExit('pawn error');
         }
-        if (abs($x1-$x2)!=1) self::wrongMoveExit();
+        if (abs($x1-$x2)!=1) $this->wrongMoveExit();
 
         if ($state['color']=='w') {
             if ($y2-$y1==1 && $desk[$x2][$y2][0]=='b'&& $y2==8) {
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'w'.$move[6];
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
         }
         elseif ($state['color']=='b') {
             if ($y1-$y2==1 && $desk[$x2][$y2][0]=='b' && $y2==1) {
                 $desk[$x1][$y1] = '';
                 $desk[$x2][$y2] = 'w'.$move[6];
             }
-            else self::wrongMoveExit();
+            else $this->wrongMoveExit();
         }
     }
 
@@ -552,7 +582,7 @@ class Game
 
                 }
             }
-            else redirect()->back()->withErrors('error');
+            else redirect()->back()->withErrors('error','error you cannot castle');
         }
 
         elseif ($move == '00') {
@@ -575,34 +605,34 @@ class Game
                         $state['black_can_00']=0;
                     }
                 }
-                else redirect()->back()->withErrors('error');
+                else redirect()->back()->withErrors('error', 'error you cannot castle');
         }
         else return redirect()->back()->withErrors('error');
     }
 
-    public function checked($desk){
+    public function checked($desk,$who){
         for ($i=1;$i<=8;$i++){
             for ($j=1;$j<=8;$j++){
-                if (!empty($desk[$i][$j]&&$desk[$i][$j]=='wk')){
+                if (!empty($desk[$i][$j]&&$desk[$i][$j]=='wk'&&$who=='w')){
                     //
                     //white king found
                     //
 
                     if ((isset($desk[$i+1][$j+1])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i][$j+1])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i-1][$j+1])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i+1][$j])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i-1][$j])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i+1][$j-1])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i][$j-1])&&$desk[$i+1][$j+1]=='bk')||
-                        (isset($desk[$i-1][$j-1])&&$desk[$i+1][$j+1]=='bk')
+                        (isset($desk[$i][$j+1])&&$desk[$i][$j+1]=='bk')||
+                        (isset($desk[$i-1][$j+1])&&$desk[$i-1][$j+1]=='bk')||
+                        (isset($desk[$i+1][$j])&&$desk[$i+1][$j]=='bk')||
+                        (isset($desk[$i-1][$j])&&$desk[$i-1][$j]=='bk')||
+                        (isset($desk[$i+1][$j-1])&&$desk[$i+1][$j-1]=='bk')||
+                        (isset($desk[$i][$j-1])&&$desk[$i][$j-1]=='bk')||
+                        (isset($desk[$i-1][$j-1])&&$desk[$i-1][$j-1]=='bk')
                     ){
-                        return 'w';
+                        return true;
                     }
 
                     if((isset($desk[$i+1][$j+1])&&$desk[$i+1][$j+1]=='bp')||
                         (isset($desk[$i-1][$j+1])&&$desk[$i-1][$j+1]=='bp')){
-                        return 'w';
+                        return true;
                     }
                     if (isset($desk[$i+1][$j+2]) && !empty($desk[$i+1][$j+2]) &&  $desk[$i+1][$j+2]=='bn'||
                         isset($desk[$i+2][$j+1]) && !empty($desk[$i+2][$j+1]) &&  $desk[$i+2][$j+1]=='bn'||
@@ -613,7 +643,7 @@ class Game
                         isset($desk[$i-1][$j-2]) && !empty($desk[$i-1][$j-2]) &&  $desk[$i-1][$j-2]=='bn'||
                         isset($desk[$i-2][$j-1]) && !empty($desk[$i-2][$j-1]) &&  $desk[$i-2][$j-1]=='bn'
                     ){
-                        return 'w';
+                        return true;
                     }
 
                     $xUpClear=false;
@@ -631,81 +661,80 @@ class Game
                         //
                         //rook + queen check
                         //
-                        if($desk[$i+$col][$j]!=''&&!$xUpClear) {
+                        if(isset($desk[$i+$col][$j])&&$desk[$i+$col][$j]!=''&&!$xUpClear) {
                             if ($desk[$i + $col][$j] == 'br' || $desk[$i + $col][$j] == 'bq') {
-                                return 'w';
+                                return true;
                             } else $xUpClear = true;
                         }
-                        if($desk[$i-$col][$j]!=''&&!$xDownClear){
+                        if(isset($desk[$i-$col][$j])&&$desk[$i-$col][$j]!=''&&!$xDownClear){
                             if($desk[$i-$col][$j]=='br'||$desk[$i-$col][$j]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $xDownClear=true;
                         }
-                        if($desk[$i][$j+$col]!=''&&!$yUpClear){
+                        if(isset($desk[$i][$j+$col])&&$desk[$i][$j+$col]!=''&&!$yUpClear){
                             if($desk[$i][$j+$col]=='br'||$desk[$i][$j+$col]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $yUpClear=true;
                         }
-                        if($desk[$i][$j-$col]!=''&&!$yDownClear){
+                        if(isset($desk[$i][$j-$col])&&$desk[$i][$j-$col]!=''&&!$yDownClear){
                             if($desk[$i][$j-$col]=='br'||$desk[$i][$j-$col]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $yDownClear=true;
                         }
                         //
                         //bishop and queen check
                         //
-                        if($desk[$i+$col][$j+$col]!=''&&!$xUp_yUpClear){
+                        if(isset($desk[$i+$col][$j+$col])&&$desk[$i+$col][$j+$col]!=''&&!$xUp_yUpClear){
                             if($desk[$i+$col][$j+$col]=='bb'||$desk[$i+$col][$j+$col]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
-                        if($desk[$i+$col][$j-$col]!=''&&!$xUp_yDownClear){
+                        if(isset($desk[$i+$col][$j-$col])&&$desk[$i+$col][$j-$col]!=''&&!$xUp_yDownClear){
                             if($desk[$i+$col][$j-$col]=='bb'||$desk[$i+$col][$j-$col]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
-                        if($desk[$i-$col][$j+$col]!=''&&!$xDown_yUpClear){
+                        if(isset($desk[$i-$col][$j+$col])&&$desk[$i-$col][$j+$col]!=''&&!$xDown_yUpClear){
                             if($desk[$i-$col][$j+$col]=='bb'||$desk[$i-$col][$j+$col]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
-                        if($desk[$i-$col][$j-$col]!=''&&!$xDown_yDownClear){
+                        if(isset($desk[$i-$col][$j-$col])&&$desk[$i-$col][$j-$col]!=''&&!$xDown_yDownClear){
                             if($desk[$i-$col][$j-$col]=='bb'||$desk[$i-$col][$j-$col]=='bq'){
-                                return 'w';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
                     }
-                    return 0;
                 }
 
 
-                elseif (!empty($desk[$i][$j]&&$desk[$i][$j]=='bk')){
+                if (!empty($desk[$i][$j]&&$desk[$i][$j]=='bk'&&$who=='b')){
                     //
                     //black king found
                     //
 
                     if ((isset($desk[$i+1][$j+1])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i][$j+1])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i-1][$j+1])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i+1][$j])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i-1][$j])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i+1][$j-1])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i][$j-1])&&$desk[$i+1][$j+1]=='wk')||
-                        (isset($desk[$i-1][$j-1])&&$desk[$i+1][$j+1]=='wk')
+                        (isset($desk[$i][$j+1])&&$desk[$i][$j+1]=='wk')||
+                        (isset($desk[$i-1][$j+1])&&$desk[$i-1][$j+1]=='wk')||
+                        (isset($desk[$i+1][$j])&&$desk[$i+1][$j]=='wk')||
+                        (isset($desk[$i-1][$j])&&$desk[$i-1][$j]=='wk')||
+                        (isset($desk[$i+1][$j-1])&&$desk[$i+1][$j-1]=='wk')||
+                        (isset($desk[$i][$j-1])&&$desk[$i][$j-1]=='wk')||
+                        (isset($desk[$i-1][$j-1])&&$desk[$i-1][$j-1]=='wk')
                     ){
-                        return 'b';
+                        return true;
                     }
 
                     if((isset($desk[$i+1][$j-1])&&$desk[$i+1][$j-1]=='wp')||
                         (isset($desk[$i-1][$j-1])&&$desk[$i-1][$j-1]=='wp')){
-                        return 'b';
+                        return true;
                     }
                     if (isset($desk[$i+1][$j+2]) && !empty($desk[$i+1][$j+2]) &&  $desk[$i+1][$j+2]=='wn'||
                         isset($desk[$i+2][$j+1]) && !empty($desk[$i+2][$j+1]) &&  $desk[$i+2][$j+1]=='wn'||
@@ -716,7 +745,7 @@ class Game
                         isset($desk[$i-1][$j-2]) && !empty($desk[$i-1][$j-2]) &&  $desk[$i-1][$j-2]=='wn'||
                         isset($desk[$i-2][$j-1]) && !empty($desk[$i-2][$j-1]) &&  $desk[$i-2][$j-1]=='wn'
                     ){
-                        return 'b';
+                        return true;
                     }
 
                     $xUpClear=false;
@@ -733,63 +762,68 @@ class Game
                         //
                         //rook + queen check
                         //
-                        if($desk[$i+$col][$j]!=''&&!$xUpClear){
+                        if(isset($desk[$i+$col][$j])&&$desk[$i+$col][$j]!=''&&!$xUpClear){
                             if($desk[$i+$col][$j]=='wr'||$desk[$i+$col][$j]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $xUpClear=true;
                         }
-                        if($desk[$i-$col][$j]!=''&&!$xDownClear){
+                        if(isset($desk[$i-$col][$j])&&$desk[$i-$col][$j]!=''&&!$xDownClear){
                             if($desk[$i-$col][$j]=='wr'||$desk[$i-$col][$j]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $xDownClear=true;
                         }
-                        if($desk[$i][$j+$col]!=''&&!$yUpClear){
+                        if(isset($desk[$i][$j+$col])&&$desk[$i][$j+$col]!=''&&!$yUpClear){
                             if($desk[$i][$j+$col]=='wr'||$desk[$i][$j+$col]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $yUpClear=true;
                         }
-                        if($desk[$i][$j-$col]!=''&&!$yDownClear){
+                        if(isset($desk[$i][$j-$col])&&$desk[$i][$j-$col]!=''&&!$yDownClear){
                             if($desk[$i][$j-$col]=='wr'||$desk[$i][$j-$col]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $yDownClear=true;
                         }
                         //
                         //bishop and queen check
                         //
-                        if($desk[$i+$col][$j+$col]!=''&&!$xUp_yUpClear){
+                        if(isset($desk[$i+$col][$j+$col])&&$desk[$i+$col][$j+$col]!=''&&!$xUp_yUpClear){
                             if($desk[$i+$col][$j+$col]=='wb'||$desk[$i+$col][$j+$col]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
-                        if($desk[$i+$col][$j-$col]!=''&&!$xUp_yDownClear){
+                        if(isset($desk[$i+$col][$j-$col])&&$desk[$i+$col][$j-$col]!=''&&!$xUp_yDownClear){
                             if($desk[$i+$col][$j-$col]=='wb'||$desk[$i+$col][$j-$col]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
-                        if($desk[$i-$col][$j+$col]!=''&&!$xDown_yUpClear){
+                        if(isset($desk[$i-$col][$j+$col])&&$desk[$i-$col][$j+$col]!=''&&!$xDown_yUpClear){
                             if($desk[$i-$col][$j+$col]=='wb'||$desk[$i-$col][$j+$col]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
-                        if($desk[$i-$col][$j-$col]!=''&&!$xDown_yDownClear){
+                        if(isset($desk[$i-$col][$j-$col])&&$desk[$i-$col][$j-$col]!=''&&!$xDown_yDownClear){
                             if($desk[$i-$col][$j-$col]=='wb'||$desk[$i-$col][$j-$col]=='wq'){
-                                return 'b';
+                                return true;
                             }
                             else $xUp_yUpClear=true;
                         }
                     }
-                    return 0;
 
                 }
             }
         }
+
+
+
+        return null;
     }
 
 }
+
+

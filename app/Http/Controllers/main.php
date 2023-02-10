@@ -6,13 +6,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Map;
 
 class main extends Controller
 {
 
     public function show(){
-        if (!Auth::check())
-        return view('mainView');
+        if (!Auth::check()) {
+            return view('mainView');
+        }
 
         else{
 
@@ -34,17 +36,23 @@ class main extends Controller
 
         $jdesk=json_decode($jdesk, true);
 
-        $jdesk=array_map(null, ...$jdesk);
+//        $jdesk=array_map(null, ...$jdesk);
+//        foreach ($jdesk as $line) {
+//            foreach ($line as $item){
+//                echo $item.'&#9&#9';
+//                if ($item=="") echo "#&#9&#9";
+//            }
+//            echo '<br>';
+//        }
 
-        foreach ($jdesk as $line) {
-            foreach ($line as $item){
-                echo $item;
-                if ($item=="") echo "#";
-            }
-
-            echo '<br>';
+        if (Auth::id()==$game->white_id) {
+            $color='w';
         }
-        return view('gameView',['desk'=>$jdesk]);
+        elseif (Auth::id()==$game->black_id) {
+            $color='b';
+        }
+
+        return view('gameView',['desk'=>$jdesk, 'gameID'=>$game->id, 'color'=>$color]);
     }
 
     public function giveUp(){
