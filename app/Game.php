@@ -438,16 +438,19 @@ class Game
             $this->wrongMoveExit();
             return null;
         }
-        for ($i=min($x1,$x2)+1; $i<max($x1,$x2); $i++){
-            for ($j=min($y1,$y2)+1; $j<max($y1,$y2); $j++){
-                if($desk[$i][$j]!=''){
-                    $this->wrongMoveExit('bishop error');
-                    return null;
-                }
+        if (isset($desk[$x2][$y2][0])==$state['color']){
+            $this->wrongMoveExit('bishop move error');
+            return false;
+        }
+        for ($i=1;$i<abs($x1-$x2);$i++){
+            if($desk[$x1+($x2-$x1-$i)][$y1+($y2-$y1-$i)]!=''){
+                $this->wrongMoveExit('bishop move error');
+                return false;
             }
         }
         $desk[$x1][$y1]='';
         $desk[$x2][$y2]=$state['color'].$piece;
+        return true;
     }
 
     private function queenMove(&$desk,$move,$state){
